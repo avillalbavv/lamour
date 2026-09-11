@@ -254,16 +254,7 @@ export function Catalog({
         </div>
       )}
       <Sheet open={sheet} onOpenChange={setSheet}>
-        <SheetContent
-          side="bottom"
-          className="filter-sheet"
-          style={{
-            padding: 25,
-            borderRadius: "20px 20px 0 0",
-            maxHeight: "88vh",
-            overflowY: "auto",
-          }}
-        >
+        <SheetContent side="bottom" className="filter-sheet">
           <SheetTitle className="sheet-title">Encontrá tu selección</SheetTitle>
           <SheetDescription>
             Combiná las opciones que prefieras.

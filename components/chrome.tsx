@@ -14,6 +14,13 @@ import {
   Camera,
   MessageCircle,
   UserRound,
+  X,
+  ChevronRight,
+  House,
+  LayoutGrid,
+  Sparkles,
+  Tags,
+  PackageSearch,
 } from "lucide-react";
 import {
   Dialog,
@@ -26,6 +33,7 @@ import {
   SheetContent,
   SheetTitle,
   SheetDescription,
+  SheetClose,
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -48,10 +56,10 @@ const links = [
   ["Sobre L’Amour", "/sobre-lamour"],
   ["Preguntas frecuentes", "/preguntas-frecuentes"],
 ];
-export function DiscreetModeToggle() {
+export function DiscreetModeToggle({ className = "" }: { className?: string }) {
   const { discreet, setDiscreet } = useStore();
   return (
-    <label className="row" style={{ gap: 8, minHeight: 32 }}>
+    <label className={`discreet-toggle ${className}`}>
       <EyeOff size={14} />
       <span>Modo discreto</span>
       <Switch
@@ -92,7 +100,7 @@ export function Header() {
           </nav>
           <div className="header-actions">
             <button
-              className="icon-button"
+              className="icon-button header-search"
               onClick={() => setSearchOpen(true)}
               aria-label="Buscar"
             >
@@ -113,7 +121,7 @@ export function Header() {
               <Heart size={21} />
             </Link>
             <button
-              className="icon-button"
+              className="icon-button header-cart"
               onClick={() => setCartOpen(true)}
               aria-label={`Carrito, ${cart.reduce((s, i) => s + i.quantity, 0)} productos`}
               style={{ position: "relative" }}
@@ -137,7 +145,7 @@ export function Header() {
               )}
             </button>
             <button
-              className="icon-button mobile-only"
+              className="icon-button mobile-only menu-trigger"
               onClick={() => setMenu(true)}
               aria-label="Abrir menú"
             >
@@ -150,24 +158,102 @@ export function Header() {
         <DiscreetModeToggle />
       </div>
       <Sheet open={menu} onOpenChange={setMenu}>
-        <SheetContent side="left" className="sheet-content">
-          <SheetTitle className="sheet-title">L’Amour</SheetTitle>
-          <SheetDescription className="sr-only">Navegación</SheetDescription>
-          <nav className="menu-links">
+        <SheetContent
+          side="right"
+          className="sheet-content mobile-menu-sheet"
+          showCloseButton={false}
+        >
+          <div className="mobile-menu-header">
+            <BrandLogo />
+            <SheetClose className="mobile-menu-close" aria-label="Cerrar menú">
+              <X size={21} />
+            </SheetClose>
+          </div>
+          <SheetTitle className="sr-only">Menú principal</SheetTitle>
+          <SheetDescription className="mobile-menu-kicker">
+            Explorá L’Amour a tu ritmo
+          </SheetDescription>
+          <nav className="menu-links" aria-label="Menú móvil">
             {[
-              ...links,
-              ["Favoritos", "/favoritos"],
-              ["Mi cuenta", "/cuenta"],
-              ["Seguir mi pedido", "/mi-pedido"],
-            ].map(([name, url]) => (
-              <Link href={url} key={name} onClick={() => setMenu(false)}>
-                {name}
+              { name: "Tienda", url: "/tienda", Icon: LayoutGrid },
+              { name: "Novedades", url: "/tienda?novedades=1", Icon: Sparkles },
+              { name: "Ofertas", url: "/tienda?ofertas=1", Icon: Tags },
+              { name: "Categorías", url: "/categorias", Icon: LayoutGrid },
+              { name: "Sobre L’Amour", url: "/sobre-lamour", Icon: Heart },
+            ].map(({ name, url, Icon }, index) => (
+              <Link
+                href={url}
+                key={name}
+                onClick={() => setMenu(false)}
+                className={path === url ? "active" : ""}
+              >
+                <span className="menu-link-index">0{index + 1}</span>
+                <Icon size={19} />
+                <span>{name}</span>
+                <ChevronRight className="menu-link-arrow" size={18} />
               </Link>
             ))}
           </nav>
-          <DiscreetModeToggle />
+          <div className="mobile-menu-quick" aria-label="Accesos rápidos">
+            {[
+              { name: "Mi cuenta", url: "/cuenta", Icon: UserRound },
+              { name: "Favoritos", url: "/favoritos", Icon: Heart },
+              { name: "Mi pedido", url: "/mi-pedido", Icon: PackageSearch },
+            ].map(({ name, url, Icon }) => (
+              <Link href={url} key={name} onClick={() => setMenu(false)}>
+                <Icon size={20} />
+                <span>{name}</span>
+              </Link>
+            ))}
+          </div>
+          <div className="mobile-menu-footer">
+            <DiscreetModeToggle className="menu-discreet" />
+            <div className="mobile-menu-secondary">
+              <Link href="/preguntas-frecuentes" onClick={() => setMenu(false)}>
+                Ayuda
+              </Link>
+              <Link href="/contacto" onClick={() => setMenu(false)}>
+                Contacto
+              </Link>
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
+      <nav className="mobile-dock" aria-label="Navegación rápida móvil">
+        <Link href="/" className={path === "/" ? "active" : ""}>
+          <House size={20} />
+          <span>Inicio</span>
+        </Link>
+        <Link href="/tienda" className={path === "/tienda" ? "active" : ""}>
+          <LayoutGrid size={20} />
+          <span>Tienda</span>
+        </Link>
+        <button
+          onClick={() => setSearchOpen(true)}
+          aria-label="Buscar productos"
+        >
+          <span className="dock-search-icon">
+            <Search size={21} />
+          </span>
+          <span>Buscar</span>
+        </button>
+        <Link href="/cuenta" className={path === "/cuenta" ? "active" : ""}>
+          <UserRound size={20} />
+          <span>Cuenta</span>
+        </Link>
+        <button
+          onClick={() => setCartOpen(true)}
+          aria-label={`Abrir carrito, ${cart.reduce((sum, item) => sum + item.quantity, 0)} productos`}
+        >
+          <span className="dock-cart-icon">
+            <ShoppingBag size={20} />
+            {cart.length > 0 && (
+              <b>{cart.reduce((sum, item) => sum + item.quantity, 0)}</b>
+            )}
+          </span>
+          <span>Bolsa</span>
+        </button>
+      </nav>
     </>
   );
 }
@@ -269,7 +355,7 @@ export function SearchOverlay() {
       .slice(0, 7) || [];
   return (
     <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-      <DialogContent className="modal-content">
+      <DialogContent className="modal-content search-modal">
         <DialogTitle className="sheet-title">
           ¿Qué querés descubrir?
         </DialogTitle>
@@ -315,7 +401,7 @@ export function CartDrawer() {
   const { cartOpen, setCartOpen } = useStore();
   return (
     <Sheet open={cartOpen} onOpenChange={setCartOpen}>
-      <SheetContent className="sheet-content">
+      <SheetContent className="sheet-content cart-sheet">
         <SheetTitle className="sheet-title">Tu selección</SheetTitle>
         <SheetDescription>Un espacio para lo que elegiste.</SheetDescription>
         <CartContents drawer onNavigate={() => setCartOpen(false)} />
