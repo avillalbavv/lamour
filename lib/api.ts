@@ -1,3 +1,5 @@
+import { getSupabaseClient } from "./supabase-client";
+
 export async function api<T = any>(
   path: string,
   data?: unknown,
@@ -5,7 +7,13 @@ export async function api<T = any>(
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (data !== undefined) headers["Content-Type"] = "application/json";
-  if (options.token) headers.Authorization = `Bearer ${options.token}`;
+  let token = options.token;
+  if (!token && path === "admin") {
+    const client = await getSupabaseClient();
+    const { data: auth } = (await client?.auth.getSession()) || { data: null };
+    token = auth?.session?.access_token;
+  }
+  if (token) headers.Authorization = `Bearer ${token}`;
   const response = await fetch("/api/" + path, {
     method: data === undefined ? "GET" : "POST",
     headers,

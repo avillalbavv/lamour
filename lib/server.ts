@@ -4,6 +4,7 @@ import {
 } from "./catalog-presentation";
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { getSupabaseAccount } from "./supabase-server";
 import { defaultSettings, demoCategories, demoProducts } from "./demo";
 import type { Product, Category, Settings } from "./types";
 export const db = () => {
@@ -45,19 +46,27 @@ export function fail(e: unknown) {
     500,
   );
 }
-export async function admin() {
-  const user = await getChatGPTUser();
-  if (!user) throw new HttpError(401, "Iniciá sesión para acceder.");
+export async function admin(request: Request) {
+  const account = await getSupabaseAccount(request);
+  const chatGPTUser = account ? null : await getChatGPTUser();
+  const email = account?.email || chatGPTUser?.email;
+  if (!email) throw new HttpError(401, "Iniciá sesión para acceder.");
   const allowed = String((env as any).ADMIN_EMAILS || "")
     .toLowerCase()
     .split(",")
     .map((s) => s.trim());
-  if (!allowed.includes(user.email.toLowerCase()))
+  if (!allowed.includes(email.toLowerCase()))
     throw new HttpError(
       403,
       "Tu cuenta no tiene acceso de administración. Configurá ADMIN_EMAILS con el correo de la persona administradora.",
     );
-  return user;
+  return {
+    email,
+    displayName:
+      account?.user_metadata?.full_name || chatGPTUser?.displayName || email,
+    fullName:
+      account?.user_metadata?.full_name || chatGPTUser?.fullName || null,
+  };
 }
 export function sameOrigin(req: Request) {
   const origin = req.headers.get("origin");

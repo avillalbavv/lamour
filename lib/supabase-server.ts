@@ -27,7 +27,8 @@ export function supabasePublicConfig() {
 
 export function supabaseAdminConfigured() {
   return Boolean(
-    supabasePublicConfig().enabled && value("SUPABASE_SERVICE_ROLE_KEY"),
+    supabasePublicConfig().enabled &&
+      (value("SUPABASE_SECRET_KEY") || value("SUPABASE_SERVICE_ROLE_KEY")),
   );
 }
 
@@ -46,15 +47,18 @@ export async function getSupabaseAccount(request: Request) {
 
 export async function listSupabaseProfiles() {
   const config = supabasePublicConfig();
-  const serviceKey = value("SUPABASE_SERVICE_ROLE_KEY");
-  if (!config.enabled || !serviceKey) return [];
+  const secretKey =
+    value("SUPABASE_SECRET_KEY") || value("SUPABASE_SERVICE_ROLE_KEY");
+  if (!config.enabled || !secretKey) return [];
+  const headers: Record<string, string> = { apikey: secretKey };
+  // Legacy service_role keys are JWTs and still require Bearer auth. New
+  // sb_secret_ keys must be sent only through the apikey header.
+  if (secretKey.startsWith("eyJ"))
+    headers.Authorization = `Bearer ${secretKey}`;
   const response = await fetch(
     `${config.url}/rest/v1/profiles?select=id,email,phone,full_name,age_confirmed,age_confirmed_at,terms_version,privacy_version,created_at,updated_at&order=created_at.desc&limit=500`,
     {
-      headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
-      },
+      headers,
     },
   );
   if (!response.ok) throw new Error("No se pudieron consultar los perfiles.");

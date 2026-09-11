@@ -92,9 +92,9 @@ const productSchema = z
         message: "El precio anterior debe superar al actual.",
       });
   });
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const user = await admin();
+    const user = await admin(req);
     const [products, categories, config, orders, coupons, newsletter, audit] =
       await Promise.all([
         getProducts(true),
@@ -142,7 +142,7 @@ export async function GET() {
 }
 export async function POST(req: Request) {
   try {
-    await admin();
+    await admin(req);
     const v = await body(req);
     const d = db();
     if (v.action === "product") {

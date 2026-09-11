@@ -33,6 +33,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { api } from "@/lib/api";
+import { getSupabaseClient } from "@/lib/supabase-client";
 import type { Product, Category, Settings } from "@/lib/types";
 import { money, statuses, availabilityLabels } from "@/lib/types";
 import { Choice } from "./primitives";
@@ -101,7 +102,12 @@ function CheckField({
 async function upload(file: File) {
   const f = new FormData();
   f.set("file", file);
-  const r = await fetch("/api/upload", { method: "POST", body: f });
+  const client = await getSupabaseClient();
+  const { data: auth } = (await client?.auth.getSession()) || { data: null };
+  const headers: Record<string, string> = {};
+  if (auth?.session?.access_token)
+    headers.Authorization = `Bearer ${auth.session.access_token}`;
+  const r = await fetch("/api/upload", { method: "POST", headers, body: f });
   const data = await r.json();
   if (!r.ok) throw new Error(data.error);
   return data.url as string;
@@ -805,13 +811,9 @@ export function AdminApp() {
           El panel permite gestionar productos, categorías, pedidos, pagos,
           envíos y contenido. El acceso se valida en el servidor.
         </p>
-        <a
-          className="button"
-          href="/signin-with-chatgpt?return_to=%2Fadmin"
-          target="_top"
-        >
-          Iniciar sesión
-        </a>
+        <Link className="button" href="/cuenta">
+          Iniciar sesión en mi cuenta
+        </Link>
         <button
           className="text-link"
           style={{ marginLeft: 20 }}

@@ -14,6 +14,10 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+revoke all on table public.profiles from anon;
+grant select, update on table public.profiles to authenticated;
+grant all on table public.profiles to service_role;
+
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
 on public.profiles for select
@@ -35,6 +39,19 @@ as $$
 begin
   if coalesce((new.raw_user_meta_data ->> 'age_confirmed')::boolean, false) is not true then
     raise exception 'La cuenta requiere confirmación de mayoría de edad';
+  end if;
+  if new.email is null or length(trim(new.email)) = 0 then
+    raise exception 'La cuenta requiere correo electrónico';
+  end if;
+  if length(trim(coalesce(new.raw_user_meta_data ->> 'phone', ''))) < 6 then
+    raise exception 'La cuenta requiere teléfono';
+  end if;
+  if length(trim(coalesce(new.raw_user_meta_data ->> 'full_name', ''))) < 2 then
+    raise exception 'La cuenta requiere nombre completo';
+  end if;
+  if length(trim(coalesce(new.raw_user_meta_data ->> 'terms_version', ''))) = 0
+     or length(trim(coalesce(new.raw_user_meta_data ->> 'privacy_version', ''))) = 0 then
+    raise exception 'La cuenta requiere aceptación de términos y privacidad';
   end if;
   insert into public.profiles (
     id, email, phone, full_name, age_confirmed, age_confirmed_at,

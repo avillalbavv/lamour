@@ -5,7 +5,7 @@ Boutique íntima para Paraguay construida con React, TypeScript, Vinext/Vite, Ta
 ## Operación
 
 - El catálogo inicia con ocho productos de demostración, identificados en las fichas y en administración. Las solicitudes se guardan en la base de datos; no hay cobros automáticos.
-- /admin requiere una sesión de ChatGPT y un correo incluido en ADMIN_EMAILS. La cuenta propietaria ya está configurada en el entorno publicado. La autenticación no basta por sí sola: todas las operaciones de administración validan la lista en el servidor.
+- /admin no está enlazado desde la tienda. Requiere una sesión de Supabase y un correo incluido en ADMIN_EMAILS. La autenticación no basta por sí sola: todas las operaciones y cargas de imágenes vuelven a validar la lista en el servidor. El preview privado mantiene compatibilidad con la identidad de ChatGPT.
 - Configurar productos reales, fotos, precios, plazos, contacto, zonas, medios de pago y políticas antes de desactivar el modo de demostración. Los productos marcados como demostración se excluyen al desactivarlo.
 - Los pedidos disponibles reservan stock en una transacción. Una cancelación no repone stock automáticamente; la administración debe comprobar el inventario y ajustarlo explícitamente.
 - Los métodos manuales admiten transferencia, QR/manual y efectivo contra entrega. No hay integración bancaria automática ni envío automático de mensajes o correos.
@@ -13,7 +13,7 @@ Boutique íntima para Paraguay construida con React, TypeScript, Vinext/Vite, Ta
 
 ## Datos y seguridad
 
-D1 almacena catálogo, variantes, imágenes, categorías, pedidos, historial, auditoría, configuración, cupones, suscripciones y límites de solicitudes. R2 almacena imágenes subidas. Supabase gestiona la autenticación y los perfiles cuando se configuran sus variables; los pedidos permanecen en D1 y se asocian a la cuenta mediante el identificador verificado. La clave service role se usa solo en el servidor.
+D1 almacena catálogo, variantes, imágenes, categorías, pedidos, historial, auditoría, configuración, cupones, suscripciones y límites de solicitudes. R2 almacena imágenes subidas. Supabase gestiona la autenticación y los perfiles cuando se configuran sus variables; los pedidos permanecen en D1 y se asocian a la cuenta mediante el identificador verificado. La clave secreta de Supabase se usa solo en el servidor.
 
 El servidor recalcula precios, entrega y descuentos. Las confirmaciones usan claves de idempotencia. Las transacciones y restricciones impiden inventarios negativos. El seguimiento devuelve solo código, estado, fechas e historial tras verificar el correo o teléfono. Los endpoints usan consultas preparadas, validación, controles de origen y límites de intentos.
 
@@ -21,11 +21,11 @@ El modo discreto y los favoritos se guardan localmente, así como el carrito pro
 
 ## Configuración
 
-ADMIN_EMAILS: correos administradores separados por coma (configurado como secreto en Sites).
+ADMIN_EMAILS: correos administradores separados por coma.
 SITE_URL: origen canónico de la tienda. El valor utilizado para metadata también está en lib/site.ts; actualizarlo al cambiar de dominio.
 DB y BUCKET: bindings nativos declarados en .openai/hosting.json; no requieren claves en el cliente.
 SUPABASE_URL y SUPABASE_PUBLISHABLE_KEY: configuración pública del proyecto de autenticación.
-SUPABASE_SERVICE_ROLE_KEY: secreto exclusivo del servidor para la auditoría administrativa. Ejecutar `supabase/schema.sql` una vez en el SQL Editor.
+SUPABASE_SECRET_KEY: clave `sb_secret_` exclusiva del servidor para la auditoría administrativa. Ejecutar `supabase/schema.sql` una vez en el SQL Editor.
 
 ## Verificación
 
