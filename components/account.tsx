@@ -52,6 +52,33 @@ type AuthView = "login" | "register" | "forgot" | "email-sent" | "recovery";
 type Notice = { tone: "info" | "success" | "error"; text: string };
 type EmailPurpose = "signup" | "recovery";
 
+class AuthTimeoutError extends Error {}
+
+function withAuthTimeout<T>(request: PromiseLike<T>, milliseconds = 18000) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => reject(new AuthTimeoutError("auth-timeout")),
+      milliseconds,
+    );
+    Promise.resolve(request).then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+function authConnectionMessage(error: unknown) {
+  return error instanceof AuthTimeoutError
+    ? "La solicitud está demorando más de lo normal. Revisá tu correo antes de volver a enviarla."
+    : "No pudimos conectar con el servicio. Revisá tu conexión e intentá otra vez.";
+}
+
 function accountRedirect() {
   return `${location.origin}/cuenta`;
 }
@@ -426,10 +453,12 @@ function LoginForm({
     setNotice(null);
     const data = new FormData(event.currentTarget);
     try {
-      const { error } = await client.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: String(data.get("password") || ""),
-      });
+      const { error } = await withAuthTimeout(
+        client.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password: String(data.get("password") || ""),
+        }),
+      );
       if (error) {
         setShowResend(error.code === "email_not_confirmed");
         setNotice({
@@ -437,10 +466,10 @@ function LoginForm({
           text: authErrorMessage(error, "No pudimos iniciar sesión. Intentá nuevamente."),
         });
       }
-    } catch {
+    } catch (error) {
       setNotice({
         tone: "error",
-        text: "No pudimos conectar con el servicio. Revisá tu conexión e intentá otra vez.",
+        text: authConnectionMessage(error),
       });
     } finally {
       setBusy(false);
@@ -455,19 +484,21 @@ function LoginForm({
     setBusy(true);
     setNotice(null);
     try {
-      const { error } = await client.auth.resend({
-        type: "signup",
-        email: email.trim().toLowerCase(),
-        options: { emailRedirectTo: accountRedirect() },
-      });
+      const { error } = await withAuthTimeout(
+        client.auth.resend({
+          type: "signup",
+          email: email.trim().toLowerCase(),
+          options: { emailRedirectTo: accountRedirect() },
+        }),
+      );
       if (error)
         setNotice({
           tone: "error",
           text: authErrorMessage(error, "No pudimos reenviar el correo."),
         });
       else onEmailSent();
-    } catch {
-      setNotice({ tone: "error", text: "No pudimos reenviar el correo." });
+    } catch (error) {
+      setNotice({ tone: "error", text: authConnectionMessage(error) });
     } finally {
       setBusy(false);
     }
@@ -567,21 +598,23 @@ function RegisterForm({
     setBusy(true);
     const now = new Date().toISOString();
     try {
-      const { data, error } = await client.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
-        options: {
-          emailRedirectTo: accountRedirect(),
-          data: {
-            full_name: String(form.get("full_name") || "").trim(),
-            phone,
-            age_confirmed: true,
-            age_confirmed_at: now,
-            terms_version: POLICY_VERSION,
-            privacy_version: POLICY_VERSION,
+      const { data, error } = await withAuthTimeout(
+        client.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: {
+            emailRedirectTo: accountRedirect(),
+            data: {
+              full_name: String(form.get("full_name") || "").trim(),
+              phone,
+              age_confirmed: true,
+              age_confirmed_at: now,
+              terms_version: POLICY_VERSION,
+              privacy_version: POLICY_VERSION,
+            },
           },
-        },
-      });
+        }),
+      );
       if (error) {
         setNotice({
           tone: "error",
@@ -592,10 +625,10 @@ function RegisterForm({
       } else {
         setNotice({ tone: "success", text: "Cuenta creada correctamente." });
       }
-    } catch {
+    } catch (error) {
       setNotice({
         tone: "error",
-        text: "No pudimos conectar con el servicio. Revisá tu conexión e intentá otra vez.",
+        text: authConnectionMessage(error),
       });
     } finally {
       setBusy(false);
@@ -712,9 +745,10 @@ function ForgotPasswordForm({
     setBusy(true);
     setNotice(null);
     try {
-      const { error } = await client.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
-        { redirectTo: accountRedirect() },
+      const { error } = await withAuthTimeout(
+        client.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+          redirectTo: accountRedirect(),
+        }),
       );
       if (error)
         setNotice({
@@ -722,10 +756,10 @@ function ForgotPasswordForm({
           text: authErrorMessage(error, "No pudimos enviar el enlace."),
         });
       else onEmailSent();
-    } catch {
+    } catch (error) {
       setNotice({
         tone: "error",
-        text: "No pudimos conectar con el servicio. Revisá tu conexión e intentá otra vez.",
+        text: authConnectionMessage(error),
       });
     } finally {
       setBusy(false);
@@ -800,16 +834,21 @@ function EmailSent({
     setNotice(null);
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const { error } =
+      const response =
         purpose === "signup"
-          ? await client.auth.resend({
-              type: "signup",
-              email: normalizedEmail,
-              options: { emailRedirectTo: accountRedirect() },
-            })
-          : await client.auth.resetPasswordForEmail(normalizedEmail, {
-              redirectTo: accountRedirect(),
-            });
+          ? await withAuthTimeout(
+              client.auth.resend({
+                type: "signup",
+                email: normalizedEmail,
+                options: { emailRedirectTo: accountRedirect() },
+              }),
+            )
+          : await withAuthTimeout(
+              client.auth.resetPasswordForEmail(normalizedEmail, {
+                redirectTo: accountRedirect(),
+              }),
+            );
+      const { error } = response;
       if (error)
         setNotice({
           tone: "error",
@@ -819,8 +858,8 @@ function EmailSent({
         setCooldown(30);
         setNotice({ tone: "success", text: "Enviamos un nuevo correo." });
       }
-    } catch {
-      setNotice({ tone: "error", text: "No pudimos reenviar el correo." });
+    } catch (error) {
+      setNotice({ tone: "error", text: authConnectionMessage(error) });
     } finally {
       setBusy(false);
     }
@@ -887,7 +926,9 @@ function RecoveryForm({
     }
     setBusy(true);
     try {
-      const { error } = await client.auth.updateUser({ password });
+      const { error } = await withAuthTimeout(
+        client.auth.updateUser({ password }),
+      );
       if (error) {
         setNotice({
           tone: "error",
@@ -899,10 +940,13 @@ function RecoveryForm({
       clearAuthUrl();
       onFinished();
       toast.success("Contraseña actualizada. Ya podés iniciar sesión.");
-    } catch {
+    } catch (error) {
       setNotice({
         tone: "error",
-        text: "No pudimos completar el cambio. Solicitá un enlace nuevo.",
+        text:
+          error instanceof AuthTimeoutError
+            ? "El cambio está demorando. Esperá unos segundos antes de volver a intentarlo."
+            : "No pudimos completar el cambio. Solicitá un enlace nuevo.",
       });
     } finally {
       setBusy(false);
@@ -1019,15 +1063,17 @@ function AccountDashboard({
             }
             setPasswordBusy(true);
             try {
-              const { error } = await client.auth.updateUser({ password: newPassword });
+              const { error } = await withAuthTimeout(
+                client.auth.updateUser({ password: newPassword }),
+              );
               if (error) toast.error(authErrorMessage(error, "No pudimos actualizar la contraseña."));
               else {
                 setNewPassword("");
                 setPasswordConfirmation("");
                 toast.success("Contraseña actualizada.");
               }
-            } catch {
-              toast.error("No pudimos actualizar la contraseña.");
+            } catch (error) {
+              toast.error(authConnectionMessage(error));
             } finally {
               setPasswordBusy(false);
             }
