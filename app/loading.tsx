@@ -1,0 +1,1 @@
+import {Skeleton} from '@/components/ui/skeleton';export default function Loading(){return <main className="container section"><Skeleton style={{height:60,width:'60%',marginBottom:30}}/><div className="loading-grid">{[1,2,3,4].map(x=><Skeleton className="loading-tile" key={x}/>)}</div></main>}

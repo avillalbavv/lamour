@@ -1,0 +1,1 @@
+import {EmptyState} from '@/components/primitives';export default function NotFound(){return <main id="main"><EmptyState title="Este camino no está disponible." text="Volvé a la tienda para seguir descubriendo."/></main>}

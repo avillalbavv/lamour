@@ -1,0 +1,2 @@
+export const metadata={alternates:{canonical:'/preguntas-frecuentes'}};
+import {Information} from '@/components/information';export default function Page(){return <Information page="preguntas-frecuentes"/>}

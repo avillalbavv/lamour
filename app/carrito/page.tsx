@@ -1,0 +1,2 @@
+export const metadata={robots:{index:false,follow:false},alternates:{canonical:'/carrito'}};
+import {CartContents} from '@/components/shopping';export default function Page(){return <main id="main" className="container"><div className="page-heading"><p className="eyebrow">Elegido por vos</p><h1>Tu selección.</h1></div><CartContents/></main>}

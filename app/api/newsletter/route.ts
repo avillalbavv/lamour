@@ -1,0 +1,2 @@
+import {z} from 'zod';import {db,body,json,rate,fail,seed} from '@/lib/server';
+export async function POST(req:Request){try{await seed();await rate(req,'newsletter',5);const v=z.object({email:z.string().email().max(200),consent:z.literal(true)}).parse(await body(req));await db().prepare('INSERT INTO newsletter (email,consent,created_at) VALUES (?,1,?) ON CONFLICT(email) DO UPDATE SET consent=1').bind(v.email.toLowerCase(),new Date().toISOString()).run();return json({ok:true})}catch(e){return fail(e)}}

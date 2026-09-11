@@ -1,0 +1,2 @@
+import {z} from 'zod';import {body,db,fail,json,rate,seed,HttpError} from '@/lib/server';
+export async function POST(req:Request){try{await seed();await rate(req,'coupon',10);const {code}=z.object({code:z.string().trim().min(2).max(30)}).parse(await body(req));const c=await db().prepare('SELECT code,percent,expires_at FROM coupons WHERE code=? AND active=1').bind(code.toUpperCase()).first();if(!c||c.expires_at&&c.expires_at<new Date().toISOString())throw new HttpError(400,'El cupón no está vigente.');return json({code:c.code,percent:c.percent})}catch(e){return fail(e)}}

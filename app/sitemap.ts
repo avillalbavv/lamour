@@ -1,0 +1,2 @@
+import type {MetadataRoute} from 'next';import {SITE_URL} from '@/lib/site';import {getStore} from '@/lib/server';
+export default async function sitemap():Promise<MetadataRoute.Sitemap>{let products:any[]=[];try{products=(await getStore()).products.filter(p=>!p.is_demo)}catch{}return [...['','/tienda','/categorias','/sobre-lamour','/preguntas-frecuentes','/envios','/contacto'].map(p=>({url:SITE_URL+p,changeFrequency:'weekly' as const,priority:p?0.7:1})),...products.map(p=>({url:SITE_URL+'/producto/'+p.slug,changeFrequency:'weekly' as const,priority:0.8}))]}

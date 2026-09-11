@@ -1,0 +1,2 @@
+export const metadata={robots:{index:false,follow:false},alternates:{canonical:'/favoritos'}};
+import {Catalog} from '@/components/catalog';export default function Page(){return <Catalog favoritesOnly/>}
